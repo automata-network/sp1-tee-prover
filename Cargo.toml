@@ -12,6 +12,8 @@ homepage = "https://ata.network/"
 license = "Apache-2.0"
 
 [workspace.dependencies]
+alloy = { version = "0.1", features = ["full"] }
+anyhow = "1.0.82"
 env_logger = "0.11"
 hex = "0.4.3"
 http-body-util = "0.1"

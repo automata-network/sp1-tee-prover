@@ -1,3 +1,7 @@
+use sp1_tee_prover::chain::TxSender;
+use sp1_tee_prover::constants::*;
+
+use alloy::primitives::Address;
 use http_body_util::{BodyExt, Full};
 use hyper::body::Bytes;
 use hyper::server::conn::http1;
@@ -19,7 +23,6 @@ use tdx::Tdx;
 use tokio::{task, time};
 use tokio::net::TcpListener;
 use uuid::Uuid;
-use web3::types::Address;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RequestProofBody {
@@ -171,20 +174,26 @@ async fn key_rotation_task() {
             drop(tee_key_pair_guard);
             new_evm_account
         };
-        // // Update the TEE registry
-        // {
-        //     let mut report_data: [u8; 64] = [0u8; 64];
-        //     report_data[0..20].copy_from_slice(new_evm_account.as_fixed_bytes());
-        //     // Initialise a TDX object
-        //     let tdx = Tdx::new();
-        //     // Retrieve an attestation report with default options passed to the hardware device
-        //     let tdx_dcap_quote = tdx.get_attestation_report_raw_with_options(
-        //         DeviceOptions {
-        //             report_data: Some(report_data),
-        //         }
-        //     ).unwrap();
-        //     log::info!("TDX Quote: {:?}", hex::encode(tdx_dcap_quote));
-        // }
+        // Update the TEE registry
+        {
+            let tx_sender = TxSender::new(DEFAULT_RPC_URL, DEFAULT_TEE_REGISTRY_CONTRACT).unwrap();
+            // TODO
+            // tx_sender.set_wallet(private_key);
+            let (report_data, isv_report_data) = tx_sender.generate_report_data(new_evm_account).await.unwrap();
+            // Initialise a TDX object
+            let tdx = Tdx::new();
+            // Retrieve an attestation report with default options passed to the hardware device
+            let tdx_dcap_quote = tdx.get_attestation_report_raw_with_options(
+                DeviceOptions {
+                    report_data: Some(isv_report_data),
+                }
+            ).unwrap();
+            log::info!("TDX Quote: {:?}", hex::encode(tdx_dcap_quote.clone()));
+            let calldata = tx_sender.generate_register_calldata(report_data, tdx_dcap_quote);
+            let tx_receipt = tx_sender.send(calldata.clone()).await.unwrap();
+            let hash = tx_receipt.transaction_hash;
+            log::info!("See transaction at: 0x{}", hex::encode(hash.as_slice()));
+        }
         // TODO: clean up the out-of-date TEE proofs to reduce memory usage
         interval.tick().await;
     }

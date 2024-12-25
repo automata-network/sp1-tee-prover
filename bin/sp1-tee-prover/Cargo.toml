@@ -6,6 +6,8 @@ edition.workspace = true
 [dependencies]
 tdx = { git = "https://github.com/automata-network/tdx-attestation-sdk.git" }
 
+alloy.workspace = true
+anyhow.workspace = true
 env_logger.workspace = true
 hex.workspace = true
 http-body-util.workspace = true
@@ -21,3 +23,4 @@ tokio.workspace = true
 lazy_static.workspace = true
 uuid.workspace = true
 web3.workspace = true
+tiny-keccak = "2.0.2"
