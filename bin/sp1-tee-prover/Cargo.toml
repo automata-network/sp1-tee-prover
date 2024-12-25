@@ -1,0 +1,23 @@
+[package]
+name = "sp1-tee-prover"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tdx = { git = "https://github.com/automata-network/tdx-attestation-sdk.git" }
+
+env_logger.workspace = true
+hex.workspace = true
+http-body-util.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+log.workspace = true
+rand.workspace = true
+secp256k1.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sp1-sdk.workspace = true
+tokio.workspace = true
+lazy_static.workspace = true
+uuid.workspace = true
+web3.workspace = true
