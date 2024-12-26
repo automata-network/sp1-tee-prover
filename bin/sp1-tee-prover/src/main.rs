@@ -35,7 +35,7 @@ struct Args {
     #[arg(short, long, default_value_t = format!("https://rpc-testnet.ata.network"))]
     rpc_url: String,
     /// The TEE registry contract
-    #[arg(short, long, default_value_t = format!("6D67Ae70d99A4CcE500De44628BCB4DaCfc1A145"))]
+    #[arg(short, long, default_value_t = format!("b110688B9F1b6a88bDAf51e0E9Be6A9243b52C94"))]
     contract: String,
 }
 
@@ -88,14 +88,19 @@ fn tee_sign(vk: &[u8], public_values: &[u8]) -> Vec<u8> {
     let mut msg = Vec::new();
     msg.append(&mut vk.to_vec());
     msg.append(&mut public_values.to_vec());
+    log::info!("message to be signed: {:?}", hex::encode(msg.clone()));
     let msg = sha256::Hash::hash(&msg);
-    let msg = Message::from_digest_slice(msg.as_ref()).unwrap();
+    log::info!("sha256(message): {:?}", hex::encode(msg));
+    let hash = web3::signing::keccak256(msg.as_ref());
+    log::info!("keccak256(sha256(message)): {:?}", hex::encode(hash.clone()));
+    let msg = Message::from_digest_slice(&hash).unwrap();
     let sig = secp.sign_ecdsa_recoverable(&msg, &tee_key_pair.secret_key);
     let (recovery_id, serialize_sig) = sig.serialize_compact();
-    let mut recovery_id_vec = vec![recovery_id as u8];
+    let mut recovery_id_vec = vec![recovery_id as u8 + 27];
     let mut result = Vec::new();
-    result.append(&mut recovery_id_vec);
     result.append(&mut serialize_sig.to_vec());
+    result.append(&mut recovery_id_vec);
+    log::info!("signature: {:?}", hex::encode(result.clone()));
     result
 }
 
@@ -122,6 +127,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>) -> Result<Response<
             let client = ProverClient::new();
             let (public_values, report) = client.execute(&request_body.elf, request_body.stdin).run().unwrap();
             log::info!("executed program with {} cycles", report.total_instruction_count());
+            log::info!("Full execution report: {:?}", report);
             let (_proving_key, verifying_key) = client.setup(&request_body.elf);
             let sig = tee_sign(&verifying_key.hash_bytes(), &public_values.as_slice());
             let tee_proof = TEEProof {
@@ -129,6 +135,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>) -> Result<Response<
                 vk: verifying_key.hash_bytes().to_vec(),
                 public_values: public_values.as_slice().to_vec(),
             };
+            log::info!("TEE Proof ID: {:?}, Proof: {:?}", proof_id, tee_proof);
             let mut proofs = PROOFS.lock().unwrap();
             proofs.insert(proof_id.clone(), tee_proof);
 
