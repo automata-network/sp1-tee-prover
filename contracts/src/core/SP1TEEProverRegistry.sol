@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.12;
 
+import {Ownable} from "solady/auth/Ownable.sol";
 import {IAttestationVerifier} from "../interfaces/IAttestationVerifier.sol";
 import {ISP1TEEProverRegistry, ReportData} from "../interfaces/ISP1TEEProverRegistry.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract SP1TEEProverRegistry is OwnableUpgradeable, ISP1TEEProverRegistry {
+contract SP1TEEProverRegistry is Ownable, ISP1TEEProverRegistry {
     error INVALID_REPORT();
     error INVALID_REPORT_DATA();
 
@@ -18,32 +18,7 @@ contract SP1TEEProverRegistry is OwnableUpgradeable, ISP1TEEProverRegistry {
     IAttestationVerifier public dcapAttestationVerifier;
 
     constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(
-        address _initialOwner,
-        address _attestationAddr,
-        uint256 _maxBlockNumberDiff,
-        uint256 _attestValiditySeconds
-    ) public initializer {
-        dcapAttestationVerifier = IAttestationVerifier(_attestationAddr);
-        maxBlockNumberDiff = _maxBlockNumberDiff;
-        attestValiditySeconds = _attestValiditySeconds;
-        _transferOwnership(_initialOwner);
-    }
-
-    function reinitialize(
-        uint8 i,
-        address _initialOwner,
-        address _attestationAddr,
-        uint256 _maxBlockNumberDiff,
-        uint256 _attestValiditySeconds
-    ) public reinitializer(i) {
-        dcapAttestationVerifier = IAttestationVerifier(_attestationAddr);
-        maxBlockNumberDiff = _maxBlockNumberDiff;
-        attestValiditySeconds = _attestValiditySeconds;
-        _transferOwnership(_initialOwner);
+        _initializeOwner(msg.sender);
     }
 
     function setMaxBlockNumberDiff(

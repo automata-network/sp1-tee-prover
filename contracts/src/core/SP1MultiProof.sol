@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.12;
 
+import {Ownable} from "solady/auth/Ownable.sol";
 import {ISP1TEEProverRegistry} from "../interfaces/ISP1TEEProverRegistry.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 
-contract SP1MultiProof is OwnableUpgradeable {
+contract SP1MultiProof is Ownable {
     using ECDSA for bytes32;
 
     error Invalid_TEE_Signer(address recovered);
@@ -13,24 +13,7 @@ contract SP1MultiProof is OwnableUpgradeable {
     ISP1TEEProverRegistry public teeProverRegistry;
 
     constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(
-        address _initialOwner,
-        address _regitryAddr
-    ) public initializer {
-        teeProverRegistry = ISP1TEEProverRegistry(_regitryAddr);
-        _transferOwnership(_initialOwner);
-    }
-
-    function reinitialize(
-        uint8 i,
-        address _initialOwner,
-        address _regitryAddr
-    ) public reinitializer(i) {
-        teeProverRegistry = ISP1TEEProverRegistry(_regitryAddr);
-        _transferOwnership(_initialOwner);
+        _initializeOwner(msg.sender);
     }
 
     function setTEEProverRegistry(address regitry) external onlyOwner {
