@@ -1,7 +1,7 @@
 use sp1_tee_prover::chain::TxSender;
-use sp1_tee_prover::constants::*;
 
 use alloy::primitives::Address;
+use clap::Parser;
 use http_body_util::{BodyExt, Full};
 use hyper::body::Bytes;
 use hyper::server::conn::http1;
@@ -23,6 +23,21 @@ use tdx::Tdx;
 use tokio::{task, time};
 use tokio::net::TcpListener;
 use uuid::Uuid;
+
+/// Simple SP1-TEE-Prover in TDX
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// The private key of the account to register TEE prover periodically
+    #[arg(short, long)]
+    key: String,
+    /// The RPC URL to interact with the blockchain
+    #[arg(short, long, default_value_t = format!("https://rpc-testnet.ata.network"))]
+    rpc_url: String,
+    /// The TEE registry contract
+    #[arg(short, long, default_value_t = format!("6D67Ae70d99A4CcE500De44628BCB4DaCfc1A145"))]
+    contract: String,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RequestProofBody {
@@ -164,6 +179,7 @@ async fn handle_request(req: Request<hyper::body::Incoming>) -> Result<Response<
 async fn key_rotation_task() {
     let mut interval = time::interval(Duration::from_secs(1800));
     loop {
+        interval.tick().await;
         let new_key_pair = generate_key_pair();
         // Replace the key pair
         let new_evm_account = {
@@ -176,9 +192,9 @@ async fn key_rotation_task() {
         };
         // Update the TEE registry
         {
-            let tx_sender = TxSender::new(DEFAULT_RPC_URL, DEFAULT_TEE_REGISTRY_CONTRACT).unwrap();
-            // TODO
-            // tx_sender.set_wallet(private_key);
+            let args = Args::parse();
+            let mut tx_sender = TxSender::new(&args.rpc_url, &args.contract).unwrap();
+            tx_sender.set_wallet(&args.key).unwrap();
             let (report_data, isv_report_data) = tx_sender.generate_report_data(new_evm_account).await.unwrap();
             // Initialise a TDX object
             let tdx = Tdx::new();
@@ -188,14 +204,14 @@ async fn key_rotation_task() {
                     report_data: Some(isv_report_data),
                 }
             ).unwrap();
-            log::info!("TDX Quote: {:?}", hex::encode(tdx_dcap_quote.clone()));
+            log::debug!("TDX Quote: {:?}", hex::encode(tdx_dcap_quote.clone()));
             let calldata = tx_sender.generate_register_calldata(report_data, tdx_dcap_quote);
+            log::debug!("calldata: {:?}", calldata);
             let tx_receipt = tx_sender.send(calldata.clone()).await.unwrap();
             let hash = tx_receipt.transaction_hash;
             log::info!("See transaction at: 0x{}", hex::encode(hash.as_slice()));
         }
         // TODO: clean up the out-of-date TEE proofs to reduce memory usage
-        interval.tick().await;
     }
 }
 
