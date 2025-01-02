@@ -13,7 +13,6 @@ use secp256k1::hashes::{sha256, Hash};
 use secp256k1::{Message, Secp256k1, SecretKey, PublicKey};
 use serde::{Deserialize, Serialize};
 use sp1_sdk::{HashableKey, ProverClient, SP1Stdin};
-use sp1_sdk::network::proto::network::ProofMode;
 use std::collections::BTreeMap;
 use std::convert::Infallible;
 use std::net::SocketAddr;
@@ -37,6 +36,24 @@ struct Args {
     /// The TEE registry contract
     #[arg(short, long, default_value_t = format!("b110688B9F1b6a88bDAf51e0E9Be6A9243b52C94"))]
     contract: String,
+}
+
+/// The mode used when generating the proof.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+#[repr(i32)]
+pub enum ProofMode {
+    /// Unspecified or invalid proof mode.
+    #[default] Unspecified = 0,
+    /// The proof mode for an SP1 core proof.
+    Core = 1,
+    /// The proof mode for a compressed proof.
+    Compressed = 2,
+    /// The proof mode for a PlonK proof.
+    Plonk = 3,
+    /// The proof mode for a Groth16 proof.
+    Groth16 = 4,
+    /// The proof mode for a TEE proof
+    TEE = 5,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

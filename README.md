@@ -89,6 +89,45 @@ The `Key` parameter is an EOA account responsible for sending transactions withi
 
 Using the existing Fibonacci example in SP1, we can easily set up an HTTP client to send requests to the TEE Prover. This primarily includes the request proof and wait proof interfaces, which are consistent with the interfaces currently exposed by the SP1 client. Check the example at [fibonacci-script](https://github.com/automata-network/sp1/blob/tee-prover-sample/examples/fibonacci/script/bin/execute.rs).
 
+Similar with the current NetworkProver interfaces, you can call async functions directly and have programmatic access to the proof ID and download proofs by ID.
+
+```rust
+pub enum ProofMode {
+    /// Unspecified or invalid proof mode.
+    #[default] Unspecified = 0,
+    /// The proof mode for an SP1 core proof.
+    Core = 1,
+    /// The proof mode for a compressed proof.
+    Compressed = 2,
+    /// The proof mode for a PlonK proof.
+    Plonk = 3,
+    /// The proof mode for a Groth16 proof.
+    Groth16 = 4,
+    /// The proof mode for a TEE proof
+    TEE = 5,
+}
+
+pub struct TEEProof {
+    pub signature: Vec<u8>,
+    pub vk: Vec<u8>,
+    pub public_values: Vec<u8>,
+}
+
+/// Requests a proof from the TEE prover, returning the TEE proof ID.
+pub async fn request_proof(
+    elf: &[u8],
+    stdin: SP1Stdin,
+    mode: ProofMode,
+) -> Result<String>;
+
+/// Waits for a TEE proof to be generated and returns the TEE proof.
+pub async fn wait_proof(
+    proof_id: &str,
+) -> Result<TEEProof>;
+```
+
+The TEE Prover concatenates the bytes of the verifying key and the public values obtained from execution, and then signs the concatenated bytes using its ephemeral key.
+
 ### Smart contracts
 
 The smart contracts consist of two main components:
